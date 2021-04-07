@@ -1,0 +1,294 @@
+<!doctype html>
+<html>
+<head>
+
+<title>jQuery Drag and Drop example</title>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+<style type="text/css">
+	/**
+	* add style to entire body
+	* ------------------------
+	* margin from each side 10px
+	* line height for each line 1.8em
+	*/
+	body {
+		margin: 10px;
+		font-family: "Roboto";
+		color: #333;
+	}
+
+	/**
+	* font-family for headers
+	*/
+	h1, h2, h3 {
+		font-family: "Roboto", "Roboto";
+	}
+
+	/**
+	* main content area where colors and empty slots are placed
+	* ---------------------------------------------------------
+	* first we apply margin from all sides,
+	* next we override top margin by 10px
+	*
+	*/
+	#content {
+		margin: auto;
+		margin-top: 10px;
+		text-align: center;
+		-moz-user-select: none;
+		-webkit-user-select: none;
+	}
+
+	/**
+	* header message with border
+	*/
+	.aboutBox {
+		clear: both;
+		text-align: center;
+		margin: auto;
+		padding: 10px;
+		background: #DA4831;
+		width: 1150px;
+	}
+
+	.aboutBox h1 {
+		font-weight: bold;
+		margin: 5px;
+		color: #FFFFFF;
+		font-size: 1.5em;
+	}
+
+	/**
+	* empty slots
+	*/
+	#colorSlots {
+		margin: 20px auto 0 auto;
+		background: #DA4831;
+	}
+
+	/**
+	* color queue
+	*/
+	#colorQueue {
+		margin: 0 auto;
+		background: #DA4831;
+	}
+
+	#colorSlots, #colorQueue {
+		width: 1150px;
+		height: 175px;
+		padding: 20px;
+	}
+
+	#colorSlots div, #colorQueue div {
+		float: left;
+		width: 150px;
+		height: 175px;
+		padding: 0px;
+		padding-top: 0px;
+		padding-bottom: 0;
+		margin: 0 0 0 10px;
+		background: #DA4831;
+	}
+
+	#colorSlots div:first-child, #colorQueue div:first-child {
+		margin-left: 0;
+	}
+
+	#colorSlots div.hovered {
+		background: #aaa;
+	}
+
+	#colorSlots div {
+	}
+
+	#colorQueue div {
+		background: #666;
+		color: #fff;
+		font-size: 50px;
+		text-shadow: 0 0 3px #000;
+	}
+
+	#colorQueue div.ui-draggable-dragging {
+		-moz-box-shadow: 0 0 .5em rgba(0, 0, 0, .8);
+		-webkit-box-shadow: 0 0 .5em rgba(0, 0, 0, .8);
+		box-shadow: 0 0 .5em rgba(0, 0, 0, .8);
+	}
+
+	/**
+	* success message div
+	* position: absolute because it will be shown as popup
+	*/
+	#successMsg {
+		position: absolute;
+		left: 580px;
+		top: 250px;
+		width: 0;
+		height: 0;
+		z-index: 100;
+		background: #FFFFFF;
+		-moz-box-shadow: .3em .3em .5em rgba(0, 0, 0, .8);
+		-webkit-box-shadow: .3em .3em .5em rgba(0, 0, 0, .8);
+		box-shadow: .3em .3em .5em rgba(0, 0, 0, .8);
+		padding: 20px;
+	}
+
+	/**
+	* error message div
+	*/
+	#errorMsg {
+		background: #FFFFFF;
+		-moz-box-shadow: .3em .3em .5em rgba(0, 0, 0, .8);
+		-webkit-box-shadow: .3em .3em .5em rgba(0, 0, 0, .8);
+		box-shadow: .3em .3em .5em rgba(0, 0, 0, .8);
+		padding: 20px;
+		color: #DA4831;
+		height: 60px;
+		width: 380px;
+		margin: auto;
+		margin-top: 10px;
+		position: relative;
+	}
+</style>
+
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
+<script type="text/javascript">
+
+	//used for tracking how many colors correctly dropped on to the empty slots
+	var colorCount = 0;
+	//number of colors in the color queue and empty slots
+	var TotalColors = 6;
+	//when the dom is ready call the function suffleColors
+	$(document).ready( suffleColors );
+
+	function suffleColors() {
+		//initially hide the success message box
+		$('#successMsg').hide();
+
+		//initially hide the error message box
+		$('#errorMsg').hide();
+
+		//initially set value 0
+		colorCount = 0;
+		//initially empty string for colors and empty slots
+		$('#colorQueue').html( '' );
+		$('#colorSlots').html( '' );
+
+		// Create the color queue with the color codes
+		var colorCodes = [ '95C906', 'FF1493', 'FC7D27', 'FFFF00', '75035D', '5ABFD3'];
+		colorCodes.sort( function() { return Math.random() - .5 } );
+
+		//iterate colorCodes array and put the colors in a div. Apply jquery ui draggable() with the div so that user can drag the color
+		//data - we put the color codes as key/value('color'/colorCodes[i]) pairs in attribute called 'data'
+		//attr - we give each div a unique id with color code
+		//appendTo - where we will put the colors
+		//draggable - jquery ui function for drag functionality
+		//containment - constrains dragging to within the bounds of the specified element or region
+		//stack - controls the z-index of the set of elements that match the selector, always brings the currently dragged item to the front.
+		//cursor - mouse curson during the drag
+		//revert - Whether the element should revert to its start position when dragging stops.
+		//        Multiple types supported:
+		//        Boolean: If set to true the element will always revert.
+		//        String: If set to "invalid", revert will only occur if the draggable has not been dropped on a droppable. For "valid", it's the other way around.
+		//        Function: A function to determine whether the element should revert to its start position. The function must return true to revert the element.
+		for ( var i = 0; i < TotalColors; i++ ) {
+			$('<div style="background-color:'+ '#' + colorCodes[i] +'"></div>').data( 'color', colorCodes[i] ).attr( 'id', colorCodes[i] ).appendTo( '#colorQueue' ).draggable( {
+				containment: '#content',
+				stack: '#colorQueue div',
+				cursor: 'move',
+				revert: true
+			});
+		}
+
+		// Create the color slots with color codes and color names
+		var tempColorCodes = [ '95C906', 'FF1493', 'FC7D27', 'FFFF00', '75035D', '5ABFD3'];
+		var colors = [ '<img src="https://live.staticflickr.com/65535/51100040984_b2746018dd_m.jpg">', '<img src="https://live.staticflickr.com/65535/51100774285_6d881ce991_m.jpg">', '<img src="https://live.staticflickr.com/65535/51100774275_b862f7303c_m.jpg">', '<img src="https://live.staticflickr.com/65535/51099967766_435417be3f_m.jpg">', '<img src="https://live.staticflickr.com/65535/51100509553_6983c1fa47_m.jpg">', '<img src="https://live.staticflickr.com/65535/51099967686_64012f9883_m.jpg">' ];
+		//data - we put the color codes in the attribute 'data' as a key/value pair
+		//droppable - jquery ui function for drop functionality
+		//accept - A draggable with the same scope value as a droppable will be accepted by the droppable.
+		//drop - function handleColorDrop has been used to handle the droppable items
+		for ( var i = 0; i < TotalColors; i++ ) {
+			$('<div>' + colors[i] + '</div>').data('color', tempColorCodes[i]).appendTo('#colorSlots').droppable({
+				accept: '#colorQueue div',
+				hoverClass: 'hovered',
+				drop: handleColorDrop
+			});
+		}
+	}
+
+	function handleColorDrop( event, ui ) {
+		var slotNumber = $(this).data( 'color' );
+		var colorNumber = ui.draggable.data( 'color' );
+
+		// If the color was dropped to the correct slot,
+		// position it directly on top of the dashed slot
+		// and prevent it being dragged again
+			if ( slotNumber === colorNumber ) {
+			//if dropped on correct slot then hide the error message box
+			$('#errorMsg').hide();
+			//disable draggable
+			ui.draggable.draggable( 'disable' );
+			//disable droppable
+			$(this).droppable( 'disable' );
+			ui.draggable.position( { of: $(this), my: 'left top', at: 'left top' } );
+			ui.draggable.draggable( 'option', 'revert', false );
+			//track how many colors have been dropped on the slots
+			colorCount++;
+		} else {
+			//show the error message if correct slot not selected for drop
+			$('#errorMsg').show();
+		}
+
+		// If all the colors have been placed correctly then display a message
+		if ( colorCount == TotalColors ) {
+			$('#successMsg').show();
+			$('#successMsg').animate( {
+				left: '50%',
+				top: '50%',
+				margin: '-50px 0 0 -200px',
+				width: '400px',
+				height: '100px',
+				opacity: 1
+			});
+		}
+
+	}
+
+</script>
+
+</head>
+<body style="background-color:#DA4831;">
+<body>
+
+
+	<div class="aboutBox">
+		<h1>Experience ADHD</h1>
+		<h2>Follow the audio instructions to complete the game</h2>
+		<figure>
+    <iframe width="6%" height="100" src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/1024061398&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true"></iframe>
+</figure>
+	</div>
+
+
+	<div id="content">
+
+
+	<div id="colorQueue"> </div>
+
+
+	<div id="colorSlots"> </div>
+
+
+	<div id="errorMsg">
+		<h3>OOPs! Wrong selection. Please try again.</h3>
+	</div>
+
+
+	<div id="successMsg">
+		<h2>You made it!</h2>
+		<button onclick="suffleColors()">Play Again</button>
+	</div>
+
+</body>
+</html>
